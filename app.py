@@ -166,7 +166,20 @@ st.markdown(
         section[data-testid="stSidebar"] {
             background: linear-gradient(180deg, #1F1147 0%, #2B1C63 100%);
         }
-        section[data-testid="stSidebar"] * { color: #EDE9FE !important; }
+        /* Only force light text on the sidebar's own headings/markdown/cards —
+           NOT on st.success/st.error/st.info boxes, which need their own
+           readable text color against their own colored backgrounds. */
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3,
+        section[data-testid="stSidebar"] h4,
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] li,
+        section[data-testid="stSidebar"] span,
+        section[data-testid="stSidebar"] div.sidebar-card,
+        section[data-testid="stSidebar"] div.sidebar-card * {
+            color: #EDE9FE !important;
+        }
         section[data-testid="stSidebar"] .sidebar-card {
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.10);
@@ -184,10 +197,44 @@ st.markdown(
             font-weight: 600;
             color: #C4B5FD !important;
         }
+        /* Keep alert boxes (success/error/info) using Streamlit's own
+           high-contrast colors instead of the sidebar override above. */
+        section[data-testid="stSidebar"] div[data-testid="stAlert"],
+        section[data-testid="stSidebar"] div[data-testid="stAlert"] * {
+            color: inherit !important;
+        }
+
+        /* Explicit, theme-independent colors for form controls so labels
+           and values are never left to an ambiguous inherited/dark-mode
+           default. */
+        .stApp label,
+        .stApp .stMarkdown p,
+        .stApp span {
+            color: #2B2440;
+        }
+        .stApp input,
+        .stApp textarea {
+            color: #2B2440 !important;
+            background-color: #FFFFFF !important;
+        }
+        .stApp div[data-baseweb="select"] > div {
+            background-color: #FFFFFF !important;
+            color: #2B2440 !important;
+        }
+        .stApp div[data-baseweb="select"] * {
+            color: #2B2440 !important;
+        }
+        .stApp div[data-baseweb="popover"] li {
+            color: #2B2440 !important;
+            background-color: #FFFFFF !important;
+        }
+        .stApp [data-testid="stNumberInput"] button {
+            color: #2B2440 !important;
+        }
 
         .stCaption, .footnote {
             text-align: center;
-            color: #8B8699;
+            color: #8B8699 !important;
         }
     </style>
     """,
