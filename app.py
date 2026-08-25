@@ -126,18 +126,76 @@ st.markdown(
         div[data-baseweb="select"] > div, .stNumberInput input {
             border-radius: 10px !important;
         }
-        .stSlider [data-testid="stThumbValue"] {
-            background: var(--accent-1) !important;
+
+        /* --- Slider enhancements (covers both st.slider and st.select_slider,
+           which share the same underlying BaseWeb slider component) --- */
+
+        /* Give the slider room to breathe so the value bubble never clips */
+        div[data-testid="stSlider"] {
+            padding-top: 0.6rem;
+            margin-bottom: 0.2rem;
+        }
+
+        /* Track rail (the full-width background bar) */
+        div[data-baseweb="slider"] > div:first-child {
+            height: 8px !important;
+            border-radius: 999px !important;
+            background: #EAE6F7 !important;
+        }
+
+        /* Filled portion of the track, left of the thumb — gradient instead of flat color */
+        div[data-baseweb="slider"] div[data-testid*="stSliderTrack"],
+        .stSlider > div > div > div > div {
+            height: 8px !important;
+            border-radius: 999px !important;
+            background: linear-gradient(90deg, var(--accent-2), var(--accent-1), var(--accent-3)) !important;
+        }
+
+        /* Thumb handle — bigger, with a soft glow ring */
+        div[data-baseweb="slider"] div[role="slider"] {
+            width: 22px !important;
+            height: 22px !important;
+            background: #FFFFFF !important;
+            border: 3px solid var(--accent-1) !important;
+            box-shadow: 0 2px 8px rgba(124,58,237,0.45), 0 0 0 4px rgba(124,58,237,0.12) !important;
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+        div[data-baseweb="slider"] div[role="slider"]:hover,
+        div[data-baseweb="slider"] div[role="slider"]:focus {
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(124,58,237,0.55), 0 0 0 6px rgba(124,58,237,0.16) !important;
+        }
+
+        /* Value bubble that floats above the thumb while dragging */
+        [data-testid*="ThumbValue"] {
+            background: linear-gradient(120deg, var(--accent-1), var(--accent-2)) !important;
             color: white !important;
             border-radius: 8px !important;
             font-weight: 600 !important;
+            font-size: 0.82rem !important;
+            padding: 0.15rem 0.55rem !important;
+            box-shadow: 0 4px 10px rgba(124,58,237,0.35);
         }
-        .stSlider [data-testid="stTickBarMin"],
-        .stSlider [data-testid="stTickBarMax"] {
+
+        /* Min/max end labels — quiet, no stray highlight box */
+        [data-testid*="TickBarMin"],
+        [data-testid*="TickBarMax"] {
             background: transparent !important;
-            color: #8B8699 !important;
+            color: #A6A2B8 !important;
+            font-size: 0.75rem !important;
         }
-        .stSlider > div > div > div > div { background: var(--accent-1) !important; }
+
+        /* Live readout card shown under a slider */
+        .slider-readout {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
 
         /* Predict button */
         div.stButton > button {
@@ -358,6 +416,27 @@ def os_for_brand(brand_name: str) -> str:
     return "iOS" if brand_name == "Apple" else "Android"
 
 
+def performance_tier(score: int):
+    """Map a benchmark score to a human-readable performance tier + color."""
+    if score < 150_000:
+        return "🟢 Entry-level", "#059669", "#D1FAE5"
+    elif score < 500_000:
+        return "🔵 Mid-range", "#2563EB", "#DBEAFE"
+    elif score < 1_000_000:
+        return "🟣 High-end", "#7C3AED", "#EDE9FE"
+    else:
+        return "🔴 Flagship", "#DB2777", "#FCE7F3"
+
+
+REFRESH_RATE_LABELS = {
+    60: "Standard — everyday use",
+    90: "Smooth — noticeably fluid",
+    120: "Very smooth — great for gaming",
+    144: "Ultra smooth — competitive gaming",
+    165: "Esports-grade — maximum fluidity",
+}
+
+
 # --- Identity & Design ---
 with st.container(border=True, key="card_identity"):
     st.markdown('<div class="section-title">🏷️ Identity &amp; Design</div>', unsafe_allow_html=True)
@@ -393,8 +472,18 @@ with st.container(border=True, key="card_performance"):
         storage_gb = st.selectbox("Storage (GB)", STORAGE_OPTIONS, index=STORAGE_OPTIONS.index(128))
 
     processor_score = st.slider(
-        "Processor benchmark score", min_value=10000, max_value=2000000, value=500000, step=1000
+        "Processor benchmark score", min_value=10000, max_value=2000000, value=500000, step=5000
     )
+    tier_label, tier_color, tier_bg = performance_tier(processor_score)
+    st.markdown(
+        f"""
+        <div class="slider-readout" style="background:{tier_bg}; color:{tier_color};">
+            {tier_label} &nbsp;·&nbsp; {processor_score:,} pts
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     c3, c4 = st.columns(2)
     with c3:
         has_5g = st.checkbox("📶 Has 5G", value=True)
@@ -411,6 +500,14 @@ with st.container(border=True, key="card_display"):
         )
     with c2:
         refresh_rate_hz = st.select_slider("Refresh rate (Hz)", options=[60, 90, 120, 144, 165], value=120)
+        st.markdown(
+            f"""
+            <div class="slider-readout" style="background:#EDE9FE; color:#7C3AED;">
+                🎮 {REFRESH_RATE_LABELS[refresh_rate_hz]}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     c3, c4 = st.columns(2)
     with c3:
