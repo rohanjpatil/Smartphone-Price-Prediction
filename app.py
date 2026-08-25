@@ -127,73 +127,27 @@ st.markdown(
             border-radius: 10px !important;
         }
 
-        /* --- Slider enhancements (covers both st.slider and st.select_slider,
-           which share the same underlying BaseWeb slider component) --- */
-
-        /* Give the slider room to breathe so the value bubble never clips */
+        /* --- Slider polish ---
+           Streamlit's slider internals use auto-generated, build-specific
+           class names (e.g. st-emotion-cache-xxxxx) that are unreliable to
+           target directly. Rather than fight that, we lean on Streamlit's
+           own theme (primaryColor, set in .streamlit/config.toml) for the
+           track/thumb color, and only add safe, layout-level polish here. */
         div[data-testid="stSlider"] {
             padding-top: 0.6rem;
-            margin-bottom: 0.2rem;
+            padding-bottom: 0.2rem;
         }
 
-        /* Track rail (the full-width background bar) */
-        div[data-baseweb="slider"] > div:first-child {
-            height: 8px !important;
-            border-radius: 999px !important;
-            background: #EAE6F7 !important;
-        }
-
-        /* Filled portion of the track, left of the thumb — gradient instead of flat color */
-        div[data-baseweb="slider"] div[data-testid*="stSliderTrack"],
-        .stSlider > div > div > div > div {
-            height: 8px !important;
-            border-radius: 999px !important;
-            background: linear-gradient(90deg, var(--accent-2), var(--accent-1), var(--accent-3)) !important;
-        }
-
-        /* Thumb handle — bigger, with a soft glow ring */
-        div[data-baseweb="slider"] div[role="slider"] {
-            width: 22px !important;
-            height: 22px !important;
-            background: #FFFFFF !important;
-            border: 3px solid var(--accent-1) !important;
-            box-shadow: 0 2px 8px rgba(124,58,237,0.45), 0 0 0 4px rgba(124,58,237,0.12) !important;
-            transition: transform 0.12s ease, box-shadow 0.12s ease;
-        }
-        div[data-baseweb="slider"] div[role="slider"]:hover,
-        div[data-baseweb="slider"] div[role="slider"]:focus {
-            transform: scale(1.15);
-            box-shadow: 0 4px 12px rgba(124,58,237,0.55), 0 0 0 6px rgba(124,58,237,0.16) !important;
-        }
-
-        /* Value bubble that floats above the thumb while dragging */
-        [data-testid*="ThumbValue"] {
-            background: linear-gradient(120deg, var(--accent-1), var(--accent-2)) !important;
-            color: white !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            font-size: 0.82rem !important;
-            padding: 0.15rem 0.55rem !important;
-            box-shadow: 0 4px 10px rgba(124,58,237,0.35);
-        }
-
-        /* Min/max end labels — quiet, no stray highlight box */
-        [data-testid*="TickBarMin"],
-        [data-testid*="TickBarMax"] {
-            background: transparent !important;
-            color: #A6A2B8 !important;
-            font-size: 0.75rem !important;
-        }
-
-        /* Live readout card shown under a slider */
+        /* Live readout card shown under a slider — fully custom-rendered,
+           so its appearance never depends on Streamlit's internal markup. */
         .slider-readout {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            margin-top: 0.5rem;
-            padding: 0.3rem 0.8rem;
+            margin-top: 0.6rem;
+            padding: 0.35rem 0.9rem;
             border-radius: 999px;
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             font-weight: 600;
         }
 
@@ -472,7 +426,12 @@ with st.container(border=True, key="card_performance"):
         storage_gb = st.selectbox("Storage (GB)", STORAGE_OPTIONS, index=STORAGE_OPTIONS.index(128))
 
     processor_score = st.slider(
-        "Processor benchmark score", min_value=10000, max_value=2000000, value=500000, step=5000
+        "Processor benchmark score",
+        min_value=10000,
+        max_value=2000000,
+        value=500000,
+        step=5000,
+        format="%,d",
     )
     tier_label, tier_color, tier_bg = performance_tier(processor_score)
     st.markdown(
@@ -499,7 +458,14 @@ with st.container(border=True, key="card_display"):
             "Screen size (inches)", min_value=4.0, max_value=8.5, value=6.1, step=0.01, format="%.2f"
         )
     with c2:
-        refresh_rate_hz = st.select_slider("Refresh rate (Hz)", options=[60, 90, 120, 144, 165], value=120)
+        refresh_rate_hz = st.segmented_control(
+            "Refresh rate (Hz)",
+            options=[60, 90, 120, 144, 165],
+            default=120,
+            selection_mode="single",
+        )
+        if refresh_rate_hz is None:
+            refresh_rate_hz = 120  # segmented_control allows deselecting; fall back to the default
         st.markdown(
             f"""
             <div class="slider-readout" style="background:#EDE9FE; color:#7C3AED;">
