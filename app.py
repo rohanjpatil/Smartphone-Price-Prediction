@@ -32,7 +32,6 @@ st.markdown(
             --accent-1: #7C3AED;
             --accent-2: #2563EB;
             --accent-3: #EC4899;
-            --surface: rgba(255, 255, 255, 0.65);
         }
 
         /* Hide default streamlit chrome */
@@ -82,30 +81,61 @@ st.markdown(
             backdrop-filter: blur(6px);
         }
 
-        /* Section card wrapper */
-        .section-card {
-            background: var(--surface);
-            border: 1px solid rgba(124,58,237,0.10);
-            border-radius: 18px;
-            padding: 1.3rem 1.4rem 0.6rem 1.4rem;
-            margin-bottom: 1.1rem;
+        /* Real bordered containers used as "cards" (st.container(border=True, key=...)).
+           Streamlit tags the wrapper with a class like "st-key-card_identity" —
+           match any element whose class starts with "st-key-card_" so this
+           works regardless of exactly which DOM node carries the class. */
+        div[class*="st-key-card_"] {
+            background: #FFFFFF !important;
+            border: 1px solid rgba(124,58,237,0.12) !important;
+            border-radius: 18px !important;
             box-shadow: 0 10px 30px -20px rgba(30, 30, 60, 0.35);
-            backdrop-filter: blur(10px);
+            padding: 0.4rem 0.2rem 0.8rem 0.2rem;
         }
         .section-title {
             font-family: 'Poppins', sans-serif;
             font-weight: 600;
-            font-size: 1.02rem;
+            font-size: 1.05rem;
             color: #2B2440;
-            margin-bottom: 0.65rem;
+            margin: 0.2rem 0 0.8rem 0;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
+        /* Locked / derived field (read-only badge, e.g. OS tied to brand) */
+        .locked-field {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: #F3F0FB;
+            border: 1px solid #DDD6FE;
+            color: #5B21B6;
+            border-radius: 10px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .locked-hint {
+            font-size: 0.76rem;
+            color: #8B8699;
+            margin-top: 0.25rem;
+        }
+
         /* Inputs */
         div[data-baseweb="select"] > div, .stNumberInput input {
             border-radius: 10px !important;
+        }
+        .stSlider [data-testid="stThumbValue"] {
+            background: var(--accent-1) !important;
+            color: white !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+        }
+        .stSlider [data-testid="stTickBarMin"],
+        .stSlider [data-testid="stTickBarMax"] {
+            background: transparent !important;
+            color: #8B8699 !important;
         }
         .stSlider > div > div > div > div { background: var(--accent-1) !important; }
 
@@ -307,7 +337,7 @@ st.markdown(
 )
 
 # ------------------------------------------------------------------
-# Input widgets
+# Valid option sets (business logic lives here, not just in the UI)
 # ------------------------------------------------------------------
 BRANDS = [
     "Apple", "Asus", "Google", "Honor", "Infinix", "Karbonn", "Lava", "Micromax",
@@ -315,71 +345,89 @@ BRANDS = [
     "Tecno", "Vivo", "Xiaomi", "iQOO", "itel",
 ]
 BUILD_MATERIALS = ["Glass+Metal", "Glass+Titanium", "Metal", "Plastic"]
-OS_OPTIONS = ["Android", "iOS"]
+
+# Only real-world RAM sizes are selectable — no arbitrary values like 9GB.
+RAM_OPTIONS = [1, 2, 3, 4, 6, 8, 12, 16, 18, 24, 32]
+
+# Only real-world storage tiers are selectable.
+STORAGE_OPTIONS = [8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+
+
+def os_for_brand(brand_name: str) -> str:
+    """Apple only ships iOS; every other brand in this dataset ships Android."""
+    return "iOS" if brand_name == "Apple" else "Android"
+
 
 # --- Identity & Design ---
-st.markdown('<div class="section-card">', unsafe_allow_html=True)
-st.markdown('<div class="section-title">🏷️ Identity &amp; Design</div>', unsafe_allow_html=True)
-c1, c2, c3 = st.columns(3)
-with c1:
-    brand = st.selectbox("Brand", BRANDS)
-with c2:
-    release_year = st.number_input("Release year", min_value=2015, max_value=2026, value=2024, step=1)
-with c3:
-    build_material = st.selectbox("Build material", BUILD_MATERIALS)
-c4, c5 = st.columns(2)
-with c4:
-    weight_g = st.number_input("Weight (g)", min_value=100.0, max_value=350.0, value=185.0, step=1.0)
-with c5:
-    os_choice = st.selectbox("Operating system", OS_OPTIONS)
-st.markdown("</div>", unsafe_allow_html=True)
+with st.container(border=True, key="card_identity"):
+    st.markdown('<div class="section-title">🏷️ Identity &amp; Design</div>', unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        brand = st.selectbox("Brand", BRANDS)
+    with c2:
+        release_year = st.number_input("Release year", min_value=2015, max_value=2026, value=2024, step=1)
+    with c3:
+        build_material = st.selectbox("Build material", BUILD_MATERIALS)
+
+    c4, c5 = st.columns(2)
+    with c4:
+        weight_g = st.number_input("Weight (g)", min_value=100.0, max_value=350.0, value=185.0, step=1.0)
+    with c5:
+        # OS is derived from brand, not user-selectable, so an invalid
+        # combination (e.g. Apple + Android) can never be constructed.
+        os_choice = os_for_brand(brand)
+        st.markdown("Operating system", unsafe_allow_html=False)
+        st.markdown(f'<div class="locked-field">🔒 {os_choice}</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="locked-hint">Fixed by brand — Apple ships iOS, every other brand ships Android.</div>',
+            unsafe_allow_html=True,
+        )
 
 # --- Performance ---
-st.markdown('<div class="section-card">', unsafe_allow_html=True)
-st.markdown('<div class="section-title">⚙️ Performance</div>', unsafe_allow_html=True)
-c1, c2 = st.columns(2)
-with c1:
-    ram_gb = st.number_input("RAM (GB)", min_value=1, max_value=32, value=8, step=1)
-with c2:
-    storage_gb = st.number_input("Storage (GB)", min_value=8, max_value=2048, value=128, step=8)
-processor_score = st.slider(
-    "Processor benchmark score", min_value=10000, max_value=2000000, value=500000, step=1000
-)
-c3, c4 = st.columns(2)
-with c3:
-    has_5g = st.checkbox("📶 Has 5G", value=True)
-with c4:
-    has_nfc = st.checkbox("💳 Has NFC", value=True)
-st.markdown("</div>", unsafe_allow_html=True)
+with st.container(border=True, key="card_performance"):
+    st.markdown('<div class="section-title">⚙️ Performance</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        ram_gb = st.selectbox("RAM (GB)", RAM_OPTIONS, index=RAM_OPTIONS.index(8))
+    with c2:
+        storage_gb = st.selectbox("Storage (GB)", STORAGE_OPTIONS, index=STORAGE_OPTIONS.index(128))
+
+    processor_score = st.slider(
+        "Processor benchmark score", min_value=10000, max_value=2000000, value=500000, step=1000
+    )
+    c3, c4 = st.columns(2)
+    with c3:
+        has_5g = st.checkbox("📶 Has 5G", value=True)
+    with c4:
+        has_nfc = st.checkbox("💳 Has NFC", value=True)
 
 # --- Display & Battery ---
-st.markdown('<div class="section-card">', unsafe_allow_html=True)
-st.markdown('<div class="section-title">🔋 Display &amp; Battery</div>', unsafe_allow_html=True)
-c1, c2 = st.columns(2)
-with c1:
-    screen_size_inch = st.number_input(
-        "Screen size (inches)", min_value=4.0, max_value=8.5, value=6.1, step=0.01, format="%.2f"
-    )
-with c2:
-    refresh_rate_hz = st.select_slider("Refresh rate (Hz)", options=[60, 90, 120, 144, 165], value=120)
-c3, c4 = st.columns(2)
-with c3:
-    battery_mah = st.number_input("Battery (mAh)", min_value=1000, max_value=8000, value=4000, step=50)
-with c4:
-    fast_charging_watt = st.number_input("Fast charging (W)", min_value=0.0, max_value=250.0, value=25.0, step=1.0)
-st.markdown("</div>", unsafe_allow_html=True)
+with st.container(border=True, key="card_display"):
+    st.markdown('<div class="section-title">🔋 Display &amp; Battery</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        screen_size_inch = st.number_input(
+            "Screen size (inches)", min_value=4.0, max_value=8.5, value=6.1, step=0.01, format="%.2f"
+        )
+    with c2:
+        refresh_rate_hz = st.select_slider("Refresh rate (Hz)", options=[60, 90, 120, 144, 165], value=120)
+
+    c3, c4 = st.columns(2)
+    with c3:
+        battery_mah = st.number_input("Battery (mAh)", min_value=1000, max_value=8000, value=4000, step=50)
+    with c4:
+        fast_charging_watt = st.number_input("Fast charging (W)", min_value=0.0, max_value=250.0, value=25.0, step=1.0)
 
 # --- Camera ---
-st.markdown('<div class="section-card">', unsafe_allow_html=True)
-st.markdown('<div class="section-title">📷 Camera</div>', unsafe_allow_html=True)
-c1, c2, c3 = st.columns(3)
-with c1:
-    rear_camera_mp = st.number_input("Rear camera (MP)", min_value=1, max_value=250, value=48, step=1)
-with c2:
-    num_rear_cameras = st.number_input("Number of rear cameras", min_value=1, max_value=6, value=2, step=1)
-with c3:
-    front_camera_mp = st.number_input("Front camera (MP)", min_value=1.0, max_value=100.0, value=13.0, step=1.0)
-st.markdown("</div>", unsafe_allow_html=True)
+with st.container(border=True, key="card_camera"):
+    st.markdown('<div class="section-title">📷 Camera</div>', unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        rear_camera_mp = st.number_input("Rear camera (MP)", min_value=1, max_value=250, value=48, step=1)
+    with c2:
+        num_rear_cameras = st.number_input("Number of rear cameras", min_value=1, max_value=6, value=2, step=1)
+    with c3:
+        front_camera_mp = st.number_input("Front camera (MP)", min_value=1.0, max_value=100.0, value=13.0, step=1.0)
 
 st.write("")
 predict_clicked = st.button("✨ Predict Price", type="primary", disabled=not model_loaded)
@@ -425,7 +473,7 @@ if predict_clicked:
             <div class="result-card">
                 <div class="result-label">Estimated Market Price</div>
                 <div class="result-price">₹{prediction:,.0f}</div>
-                <div class="result-sub">{brand} · {ram_gb}GB RAM · {storage_gb}GB storage · {release_year}</div>
+                <div class="result-sub">{brand} · {ram_gb}GB RAM · {storage_gb}GB storage · {os_choice} · {release_year}</div>
             </div>
             """,
             unsafe_allow_html=True,
